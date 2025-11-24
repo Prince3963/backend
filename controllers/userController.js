@@ -7,58 +7,72 @@ const getAllUser = async (req, res) => {
 };
 
 const registerUser = async (req, res) => {
-    const {name , email, age, password} = req.body;
-    const newUser = new User({name, email, age, password});
-    await newUser.save();
+    const { name, email, age, password } = req.body;
 
+    const hashed = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+        name,
+        email,
+        age,
+        password: hashed
+    });
+
+    await newUser.save();
     res.status(200).json(newUser);
 };
 
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
-    const isEmail = await User.findOne({email});
-    if(!isEmail) {
-        return res.status(404).json({message : "Email not found"});
-    }; 
 
-    const validPassword = bcrypt.compare(password, isEmail.password);
+    const isEmail = await User.findOne({ email });
+    if (!isEmail) {
+        return res.status(404).json({ message: "Email not found" });
+    }
+
+    const validPassword = await bcrypt.compare(password, isEmail.password);
     if (!validPassword) {
-        return res.status(404).json({message : "Invalid password"});
+        return res.status(400).json({ message: "Invalid password" });
     }
 
     res.status(200).json({
-        message : "Login successful",
-        isEmail: {
+        message: "Login successful",
+        user: {
             id: isEmail._id,
-            name : isEmail.name,
-            email : isEmail.email,
-            age : isEmail.age
+            name: isEmail.name,
+            email: isEmail.email,
+            age: isEmail.age
         }
     });
 };
 
 const updateUser = async (req, res) => {
     const { id } = req.params;
-    const {name, email, age} = req.body;
+    const { name, email, age } = req.body;
 
     const updateUser = await User.findByIdAndUpdate(
         id,
-        {name, email, age},
-        { new:true }
+        { name, email, age },
+        { new: true }
     );
 
     if (!updateUser) {
-        res.status(404).json({message : "User not found"});
+        return res.status(404).json({ message: "User not found" });
     }
+
     res.status(200).json(updateUser);
 };
 
 const deleteUser = async (req, res) => {
-    const {id} = req.params;
+    const { id } = req.params;
 
     const deleteUser = await User.findByIdAndDelete(id);
+
+    if (!deleteUser) {
+        return res.status(404).json({ message: "User not found" });
+    }
 
     res.status(200).json(deleteUser);
 };
 
-module.exports = {getAllUser, loginUser, registerUser, updateUser, deleteUser};      
+module.exports = { getAllUser, loginUser, registerUser, updateUser, deleteUser };
